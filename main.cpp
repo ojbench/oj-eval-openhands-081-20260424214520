@@ -19,6 +19,19 @@ int level_version[MAXN];
 int current_level_version = 0;
 int n;
 
+// Union-Find for connected components
+int parent[MAXN];
+int find(int x) {
+    if (parent[x] != x) parent[x] = find(parent[x]);
+    return parent[x];
+}
+
+void unite(int x, int y) {
+    x = find(x);
+    y = find(y);
+    if (x != y) parent[x] = y;
+}
+
 inline void bfs(int s) {
     current_level_version++;
     queue<int> q;
@@ -84,9 +97,15 @@ int main() {
     int m;
     cin >> n >> m;
     
+    // Initialize Union-Find
+    for (int i = 1; i <= n; i++) {
+        parent[i] = i;
+    }
+    
     for (int i = 0; i < m; i++) {
         int a, b;
         cin >> a >> b;
+        unite(a, b);
         graph[a].push_back({b, 1, (int)graph[b].size(), 1});
         graph[b].push_back({a, 0, (int)graph[a].size() - 1, 0});
         graph[b].push_back({a, 1, (int)graph[a].size(), 1});
@@ -97,6 +116,10 @@ int main() {
     
     for (int a = 1; a <= n; a++) {
         for (int b = a + 1; b <= n; b++) {
+            // Skip if not in same connected component
+            if (find(a) != find(b)) {
+                continue;
+            }
             reset_capacities();
             total += max_flow(a, b);
         }
