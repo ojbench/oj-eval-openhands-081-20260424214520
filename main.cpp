@@ -10,7 +10,7 @@ const int MAXN = 3005;
 const int INF = 1e9;
 
 struct Edge {
-    int to, cap, rev;
+    int to, cap, rev, orig_cap;
 };
 
 class MaxFlow {
@@ -40,7 +40,7 @@ private:
 
     int dfs(int v, int t, int f) {
         if (v == t) return f;
-        for (int& i = iter[v]; i < graph[v].size(); i++) {
+        for (int& i = iter[v]; i < (int)graph[v].size(); i++) {
             Edge& e = graph[v][i];
             if (e.cap > 0 && level[v] < level[e.to]) {
                 int d = dfs(e.to, t, min(f, e.cap));
@@ -63,8 +63,16 @@ public:
     }
 
     void add_edge(int from, int to, int cap) {
-        graph[from].push_back({to, cap, (int)graph[to].size()});
-        graph[to].push_back({from, 0, (int)graph[from].size() - 1});
+        graph[from].push_back({to, cap, (int)graph[to].size(), cap});
+        graph[to].push_back({from, 0, (int)graph[from].size() - 1, 0});
+    }
+
+    void reset_capacities() {
+        for (int i = 0; i <= n; i++) {
+            for (auto& e : graph[i]) {
+                e.cap = e.orig_cap;
+            }
+        }
     }
 
     int max_flow(int s, int t) {
@@ -76,28 +84,8 @@ public:
             int f;
             while ((f = dfs(s, t, INF)) > 0) {
                 flow += f;
+                if (flow >= 3) return flow; // Early termination: max degree is 3
             }
-        }
-    }
-
-    void save_graph(vector<pair<int, int>>& edges) {
-        edges.clear();
-        for (int i = 1; i <= n; i++) {
-            for (auto& e : graph[i]) {
-                if (e.to > i && e.cap == 1) {
-                    edges.push_back({i, e.to});
-                }
-            }
-        }
-    }
-
-    void restore_graph(const vector<pair<int, int>>& edges) {
-        for (int i = 0; i <= n; i++) {
-            graph[i].clear();
-        }
-        for (auto& edge : edges) {
-            add_edge(edge.first, edge.second, 1);
-            add_edge(edge.second, edge.first, 1);
         }
     }
 };
@@ -112,24 +100,18 @@ int main() {
     MaxFlow mf;
     mf.init(n);
     
-    vector<pair<int, int>> edges;
     for (int i = 0; i < m; i++) {
         int a, b;
         cin >> a >> b;
-        edges.push_back({a, b});
+        mf.add_edge(a, b, 1);
+        mf.add_edge(b, a, 1);
     }
     
     long long total = 0;
     
     for (int a = 1; a <= n; a++) {
         for (int b = a + 1; b <= n; b++) {
-            // Restore graph for this computation
-            mf.init(n);
-            for (auto& edge : edges) {
-                mf.add_edge(edge.first, edge.second, 1);
-                mf.add_edge(edge.second, edge.first, 1);
-            }
-            
+            mf.reset_capacities();
             int flow = mf.max_flow(a, b);
             total += flow;
         }
